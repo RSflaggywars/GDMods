@@ -35,3 +35,7 @@ Everything is stored in the browser's localStorage.
 3. Switch role to **Moderator** — delete/ban buttons appear
 4. Ban "Player1", switch back to User — you can't comment anymore
 5. Click **reset demo** to wipe everything
+
+## Importing in Games/projects
+Importing in games is supported under the C file.
+Ur game has to be written in C !
