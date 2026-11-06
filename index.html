@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Geometry Dash - Moderator System (demo)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0b0b14; color: #e8e8f0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    display: flex; justify-content: center; padding: 24px;
+  }
+  .wrap { width: 720px; max-width: 100%; }
+
+  /* level header, GD-style */
+  .level-card {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 2px solid #3d5afe; border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .level-icon {
+    width: 64px; height: 64px; border-radius: 10px;
+    background: conic-gradient(#ff4757, #ffa502, #2ed573, #1e90ff, #a55eea, #ff4757);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: bold; color: #fff;
+  }
+  .level-info h1 { font-size: 20px; color: #ffd700; }
+  .level-info .meta { font-size: 12px; color: #9aa0b5; margin-top: 4px; }
+  .stars { color: #ffd700; letter-spacing: 2px; }
+
+  /* role picker */
+  .rolebar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    background: #14141f; border: 1px solid #2a2a3d; border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 14px; font-size: 13px;
+  }
+  .rolebar label { color: #9aa0b5; }
+  select, input, button {
+    background: #1e1e2e; color: #e8e8f0; border: 1px solid #3a3a55;
+    border-radius: 6px; padding: 6px 10px; font-size: 13px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: #2a2a40; }
+  .btn-del { color: #ff6b6b; }
+  .btn-ban { color: #ffa502; }
+  .btn-report { color: #74b9ff; font-size: 11px; padding: 2px 6px; }
+
+  /* comment rules */
+  .rules {
+    background: #14141f; border-left: 3px solid #ffa502;
+    padding: 10px 14px; font-size: 12px; color: #b8bccb;
+    border-radius: 0 8px 8px 0; margin-bottom: 14px; line-height: 1.5;
+  }
+  .rules b { color: #ffd700; }
+
+  /* comments */
+  .comment {
+    display: flex; gap: 10px; padding: 12px 14px;
+    background: #14141f; border: 1px solid #23233a;
+    border-radius: 10px; margin-bottom: 10px;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; color: #fff; font-size: 15px;
+    background: #2a2a40;
+  }
+  .c-body { flex: 1; min-width: 0; }
+  .c-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .username { font-weight: 600; font-size: 14px; }
+  .badge {
+    font-size: 10px; font-weight: bold; padding: 1px 6px;
+    border-radius: 8px; background: #2a2a40; color: #c8ffc8;
+  }
+  .badge.dev   { background: #32ffff22; color: #32ffff; }
+  .badge.lead  { background: #e8e8f022; color: #e8e8f0; }
+  .badge.mod   { background: #4bff4b22; color: #4bff4b; }
+  .badge.advisor { background: #c8ffc822; color: #c8ffc8; }
+  .c-text { margin-top: 4px; font-size: 14px; line-height: 1.45; word-wrap: break-word; }
+  .c-foot { margin-top: 6px; display: flex; gap: 12px; align-items: center; font-size: 11px; color: #6b7089; }
+  .c-actions { margin-left: auto; display: flex; gap: 6px; }
+  .mod-tools { display: flex; gap: 6px; margin-left: auto; }
+
+  /* role-colored comment backgrounds (like GD highlights) */
+  .comment.role-advisor { background: #c8ffc80d; border-color: #c8ffc833; }
+  .comment.role-mod     { background: #4bff4b0d; border-color: #4bff4b33; }
+  .comment.role-dev     { background: #32ffff0d; border-color: #32ffff33; }
+  .comment.pinned { border-color: #ffd70088; }
+  .comment.banned-user { opacity: .45; }
+
+  .pin-tag { font-size: 10px; color: #ffd700; }
+
+  /* composer */
+  .composer {
+    display: flex; gap: 8px; margin-top: 6px;
+  }
+  .composer input[type=text] { flex: 1; }
+  .counter { font-size: 11px; color: #6b7089; text-align: right; margin-top: 4px; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #2a2a40; border: 1px solid #ffd700; color: #ffd700;
+    padding: 8px 18px; border-radius: 8px; font-size: 13px;
+    opacity: 0; transition: opacity .3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  .section-title { font-size: 13px; color: #9aa0b5; margin: 18px 0 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .empty { color: #6b7089; font-size: 13px; text-align: center; padding: 30px; }
+  .report-queue { font-size: 12px; color: #ff6b6b; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="level-card">
+    <div class="level-icon">★</div>
+    <div class="level-info">
+      <h1>Stairway to Hexagon</h1>
+      <div class="meta">
+        <span class="stars">★★★★★★★</span> &nbsp;·&nbsp; Harder Demon&nbsp; ·&nbsp;
+        342,118 attempts&nbsp; ·&nbsp; song: Deadlocked
+      </div>
+    </div>
+  </div>
+
+  <div class="rolebar">
+    <label>You are:</label>
+    <input type="text" id="myName" value="Player1" style="width:110px">
+    <select id="myRole">
+      <option value="user">User</option>
+      <option value="advisor">Rating Advisor</option>
+      <option value="mod">Moderator</option>
+      <option value="lead">Leaderboard Moderator</option>
+      <option value="dev">Developer</option>
+    </select>
+    <span id="roleNote" style="color:#6b7089"></span>
+    <button id="clearData" style="margin-left:auto">reset demo</button>
+  </div>
+
+  <div class="rules">
+    <b>Comment rules:</b> do not spam · do not harass other players ·
+    do not post inappropriate or controversial content · do not try to
+    bypass these rules. Enforcement is at Moderators' discretion.
+    <span id="banStatus" style="color:#ff6b6b"></span>
+  </div>
+
+  <div class="section-title">Comments <span id="commentCount" style="color:#6b7089"></span></div>
+  <div id="comments"></div>
+
+  <div class="composer">
+    <input type="text" id="commentInput" maxlength="200" placeholder="Write a comment...">
+    <button id="postBtn">Post</button>
+  </div>
+  <div class="counter"><span id="charCount">0</span>/200</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LS_KEY = "gdmod_comments_v1";
+const LS_BANS = "gdmod_bans_v1";
+
+const ROLE_INFO = {
+  user:    { label: "",        badge: "",        color: "#e8e8f0" },
+  advisor: { label: "Advisor", badge: "ADVISOR", color: "#c8ffc8" },
+  mod:     { label: "Mod",     badge: "MOD",     color: "#4bff4b" },
+  lead:    { label: "Lead Mod",badge: "LEAD",    color: "#e8e8f0" },
+  dev:     { label: "Dev",     badge: "DEV",     color: "#32ffff" },
+};
+// GD comment highlight colors
+const COMMENT_BG = { advisor: "role-advisor", mod: "role-mod", dev: "role-dev" };
+
+const BAN_DURATIONS = [
+  ["1 minute", 60 * 1000],
+  ["10 minutes", 10 * 60 * 1000],
+  ["1 hour", 60 * 60 * 1000],
+  ["24 hours", 24 * 60 * 60 * 1000],
+  ["permanent", Infinity],
+];
+
+let comments = JSON.parse(localStorage.getItem(LS_KEY) || "null") || seed();
+let bans = JSON.parse(localStorage.getItem(LS_BANS) || "{}");
+
+function seed() {
+  const now = Date.now();
+  return [
+    { id: 1, user: "RobTop", role: "dev", text: "thanks for playing :)", time: now - 86400000 * 2, likes: 4210, pinned: true, reports: 0 },
+    { id: 2, user: "CubeGuy99", role: "user", text: "HOW IS THIS EVEN POSSIBLE", time: now - 3600000 * 5, likes: 312, reports: 0 },
+    { id: 3, user: "NeonCat", role: "advisor", text: "solid level! the wave section around 45% is clean. consider a shorter ship part?", time: now - 3600000 * 3, likes: 88, reports: 0 },
+    { id: 4, user: "h8r_m3", role: "user", text: "this level is garbage delete it", time: now - 3600000, likes: 2, reports: 3 },
+    { id: 5, user: "GDMod", role: "mod", text: "reminder: keep comments civil. -M", time: now - 1800000, likes: 156, reports: 0 },
+  ];
+}
+
+function save() {
+  localStorage.setItem(LS_KEY, JSON.stringify(comments));
+  localStorage.setItem(LS_BANS, JSON.stringify(bans));
+}
+
+function esc(s) {
+  return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function timeAgo(t) {
+  const d = Date.now() - t;
+  if (d < 60000) return "just now";
+  if (d < 3600000) return Math.floor(d/60000) + "m ago";
+  if (d < 86400000) return Math.floor(d/3600000) + "h ago";
+  return Math.floor(d/86400000) + "d ago";
+}
+function isMod() {
+  return ["advisor","mod","lead","dev"].includes(myRole());
+}
+function canDelete() { return ["mod","lead","dev"].includes(myRole()); }
+function myRole() { return document.getElementById("myRole").value; }
+function myName() { return document.getElementById("myName").value.trim() || "Player1"; }
+
+function banActive(user) {
+  const b = bans[user];
+  if (!b) return false;
+  if (b.until === null) return true;           // permanent
+  if (Date.now() < b.until) return true;
+  delete bans[user]; save(); return false;
+}
+function banLabel(user) {
+  const b = bans[user];
+  if (!b) return "";
+  if (b.until === null) return " (banned)";
+  if (Date.now() < b.until) return " (banned " + Math.ceil((b.until-Date.now())/60000) + "m)";
+  return "";
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function avatarColor(name) {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return `hsl(${h}, 55%, 38%)`;
+}
+
+function render() {
+  const box = document.getElementById("comments");
+  const sorted = [...comments].sort((a, b) =>
+    (b.pinned - a.pinned) || (b.time - a.time));
+
+  document.getElementById("commentCount").textContent =
+    `(${sorted.length})`;
+
+  const bs = document.getElementById("banStatus");
+  const activeBans = Object.keys(bans).filter(banActive);
+  bs.textContent = activeBans.length
+    ? "  |  active comment bans: " + activeBans.join(", ") : "";
+
+  if (!sorted.length) {
+    box.innerHTML = '<div class="empty">No comments yet. Be the first!</div>';
+    return;
+  }
+
+  box.innerHTML = sorted.map(c => {
+    const ri = ROLE_INFO[c.role] || ROLE_INFO.user;
+    const isBanned = banActive(c.user);
+    const mine = c.user === myName() && myRole() === "user";
+    let tools = "";
+    if (canDelete() && !mine) {
+      // ban dropdown
+      tools += `<span class="mod-tools">
+        <button class="btn-del" onclick="delComment(${c.id})">delete</button>
+        <select onchange="banUser('${esc(c.user)}', this.value); this.selectedIndex=0;">
+          <option value="">ban...</option>` +
+        BAN_DURATIONS.map(([l, ms]) =>
+          `<option value="${ms === Infinity ? "inf" : ms}">${l}</option>`).join("") +
+        `</select>
+        ${bans[c.user] ? `<button class="btn-ban" onclick="unban('${esc(c.user)}')">unban</button>` : ""}
+      </span>`;
+    }
+    if (!canDelete()) {
+      tools += `<span class="mod-tools">
+        <button class="btn-report" onclick="report(${c.id})">report</button>
+      </span>`;
+    }
+    const badge = ri.badge
+      ? `<span class="badge badge-${c.role}">${ri.badge}</span>` : "";
+    const pin = c.pinned ? `<span class="pin-tag">📌 pinned</span>` : "";
+    const rep = c.reports > 0 ? `<span title="reports">⚑${c.reports}</span>` : "";
+
+    return `<div class="comment ${COMMENT_BG[c.role] || ""} ${c.pinned ? "pinned" : ""} ${isBanned ? "banned-user" : ""}">
+      <div class="avatar" style="background:${avatarColor(c.user)}">${esc(c.user[0].toUpperCase())}</div>
+      <div class="c-body">
+        <div class="c-head">
+          <span class="username" style="color:${ri.color}">${esc(c.user)}</span>
+          ${badge}${pin}${rep}
+          ${isBanned ? `<span class="badge" style="color:#ff6b6b">BANNED</span>` : ""}
+        </div>
+        <div class="c-text">${esc(c.text)}</div>
+        <div class="c-foot">
+          <span>${timeAgo(c.time)}</span>
+          <span>♥ ${c.likes}</span>
+          ${tools}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function post() {
+  const inp = document.getElementById("commentInput");
+  const text = inp.value.trim();
+  if (!text) return;
+
+  const role = myRole();
+  const user = myName();
+
+  if (role === "user" && banActive(user)) {
+    toast(`You are comment-banned${banLabel(user)}`);
+    return;
+  }
+  // spam check: same text twice in a row by same user
+  const last = comments[comments.length - 1];
+  if (last && last.user === user && last.text === text) {
+    toast("Whoah, slow down - no spam!");
+    return;
+  }
+
+  comments.push({
+    id: Date.now(), user, role,
+    text, time: Date.now(), likes: 0, pinned: false, reports: 0,
+  });
+  inp.value = "";
+  document.getElementById("charCount").textContent = "0";
+  save(); render();
+  toast(role === "user" ? "Comment posted" : `Posted as ${ROLE_INFO[role].label}`);
+}
+
+function delComment(id) {
+  comments = comments.filter(c => c.id !== id);
+  save(); render(); toast("Comment deleted");
+}
+function report(id) {
+  const c = comments.find(x => x.id === id);
+  if (c) { c.reports++; save(); render(); toast("Report sent to moderators"); }
+}
+function banUser(user, val) {
+  if (!val) return;
+  bans[user] = { until: val === "inf" ? null : Date.now() + Number(val) };
+  save(); render();
+  toast(`${user} comment-banned`);
+}
+function unban(user) {
+  delete bans[user]; save(); render(); toast(`${user} unbanned`);
+}
+
+document.getElementById("postBtn").onclick = post;
+document.getElementById("commentInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") post();
+});
+document.getElementById("commentInput").addEventListener("input", e => {
+  document.getElementById("charCount").textContent = e.target.value.length;
+});
+document.getElementById("myRole").addEventListener("change", render);
+document.getElementById("myName").addEventListener("input", render);
+document.getElementById("clearData").onclick = () => {
+  if (confirm("Wipe all comments and bans?")) {
+    localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_BANS);
+    location.reload();
+  }
+};
+
+// role note
+const notes = {
+  user: "normal player - can comment, can be banned",
+  advisor: "Rating Advisor - green comments, can delete? no - can suggest levels",
+  mod: "Moderator - green comments, can DELETE comments + ban users",
+  lead: "Leaderboard Moderator - manages leaderboards",
+  dev: "Developer - cyan comments, all powers",
+};
+document.getElementById("roleNote").textContent = notes.user;
+document.getElementById("myRole").addEventListener("change", e => {
+  document.getElementById("roleNote").textContent = notes[e.target.value];
+});
+
+render();
+</script>
+</body>
+</html>
